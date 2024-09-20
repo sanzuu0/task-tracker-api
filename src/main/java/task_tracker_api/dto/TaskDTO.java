@@ -1,9 +1,7 @@
-package org.my.task.tracker.api.dto;
-
-
-
+package task_tracker_api.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -14,15 +12,12 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProjectDTO {
+public class TaskDTO {
 
-    @NonNull
     Long id;
 
-    @NonNull
     String name;
 
-    @NonNull
     @JsonProperty("created_at")
     Instant createdAt;
 }

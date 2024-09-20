@@ -1,12 +1,12 @@
-package org.my.task.tracker.api.store.entities;
-
+package task_tracker_api.store.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
-
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -15,8 +15,8 @@ import java.time.Instant;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-@Table(name = "task")
-public class TaskEntity {
+@Table(name = "project")
+public class ProjectEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -28,5 +28,8 @@ public class TaskEntity {
     @Builder.Default
     Instant createdAt = Instant.now();
 
-    String description;
+    @Builder.Default
+    @OneToMany
+    @JoinColumn(name = "project_id", referencedColumnName = "id")
+    List<TaskStateEntity> taskStates = new ArrayList<>();
 }
