@@ -1,5 +1,4 @@
-package org.my.tasktrackerapi.store.entities;
-
+package org.my.task.tracker.api.store.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -16,8 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-@Table(name = "task_state")
-public class TaskStateEntity {
+@Table(name = "project")
+public class ProjectEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -29,9 +28,8 @@ public class TaskStateEntity {
     @Builder.Default
     Instant createdAt = Instant.now();
 
-    Long ordinal;
-
     @Builder.Default
     @OneToMany
-    List<TaskEntity> tasks = new ArrayList<>();
+    @JoinColumn(name = "project_id", referencedColumnName = "id")
+    List<TaskStateEntity> taskStates = new ArrayList<>();
 }

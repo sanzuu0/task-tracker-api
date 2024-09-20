@@ -1,6 +1,6 @@
-package org.my.tasktrackerapi.store.repositories;
+package org.my.task.tracker.api.store.repositories;
 
-import org.my.tasktrackerapi.store.entities.ProjectEntity;
+import org.my.task.tracker.api.store.entities.ProjectEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {

@@ -1,4 +1,4 @@
-package org.my.tasktrackerapi.store.entities;
+package org.my.task.tracker.api.store.entities;
 
 
 import jakarta.persistence.*;
