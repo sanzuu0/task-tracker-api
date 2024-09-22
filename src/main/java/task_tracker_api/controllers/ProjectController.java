@@ -8,13 +8,18 @@ import lombok.experimental.FieldDefaults;
 import org.apache.coyote.BadRequestException;
 
 import org.springframework.web.bind.annotation.*;
+import task_tracker_api.dto.AckDto;
 import task_tracker_api.dto.ProjectDTO;
 import task_tracker_api.exceptions.NotFoundException;
 import task_tracker_api.factories.ProjectDTOFactory;
 import task_tracker_api.store.entities.ProjectEntity;
 import task_tracker_api.store.repositories.ProjectRepository;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -25,62 +30,80 @@ public class ProjectController {
     ProjectRepository projectRepository;
     ProjectDTOFactory projectDTOFactory;
 
-    public static final String CREATE_PROJECT = "/api/projects";
-    public static final String EDIT_PROJECT = "/api/projects/{project_id}";
+    public static final String FETCH_PROJECT = "api/projects";
+    public static final String CREATE_OR_UPDATE_PROJECT = "api/projects";
+    public static final String DELETE_PROJECT = "api/projects{project_id}";
 
-    @PostMapping(CREATE_PROJECT)
-    public ProjectDTO createProject(@RequestParam String name) throws BadRequestException {
 
-        if (name.trim().isEmpty()) {
-            throw new BadRequestException(String.format("Project \"s%\" does not exist", name));
-        }
+    @GetMapping(FETCH_PROJECT)
+    public List<ProjectDTO> fetchProject(
+            @RequestParam(value = "prefix_name", required = false) Optional<String> optionalPrefixName) {
 
-        projectRepository.findByName(name)
-                .ifPresent(project -> {
-                    try {
-                        throw new BadRequestException(String.format("Project \"s%\" already exists", name));
-                    } catch (BadRequestException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+        optionalPrefixName = optionalPrefixName.filter(prefixName -> !prefixName.trim().isEmpty());
 
-        ProjectEntity projectEntity = projectRepository.saveAndFlush(
-                ProjectEntity.builder()
-                        .name(name)
-                        .build()
-        );
+        Stream<ProjectEntity> projectEntityStream = optionalPrefixName
+                .map(projectRepository::streamAllByNameStartsWithIgnoreCase)
+                .orElseGet(projectRepository::streamAllBy);
 
-        return projectDTOFactory.makeProjectDTO(projectEntity);
+        return projectEntityStream.map(projectDTOFactory::makeProjectDTO)
+                .collect(Collectors.toList());
     }
 
+    @PutMapping(CREATE_OR_UPDATE_PROJECT)
+    public ProjectDTO createOrUpdateProject(
+            @RequestParam(value = "project_id", required = false) Optional<Long> optionalProjectId,
+            @RequestParam(value = "project_name", required = false) Optional<String> optionalProjectName) throws BadRequestException {
 
-    @PatchMapping(EDIT_PROJECT)
-    public ProjectDTO editProject(@PathVariable("project_id") Long projectId, @RequestParam String name) throws BadRequestException, NotFoundException {
+        optionalProjectName = optionalProjectName.filter(projectName -> !projectName.trim().isEmpty());
 
-        if (name.trim().isEmpty()) {
-            throw new BadRequestException(String.format("Project \"s%\" does not exist", name));
+        boolean isCreate = !optionalProjectId.isPresent();
+
+        ProjectEntity projectEntity = optionalProjectId
+                .map(this::getProjectOrThrowException)
+                .orElseGet(() -> ProjectEntity.builder().build());
+
+        if (isCreate && optionalProjectName.isPresent()) {
+            throw new BadRequestException("Project name can't be empty");
         }
 
-        ProjectEntity projectEntity = projectRepository.findById(projectId)
+        optionalProjectName
+                .ifPresent(projectName -> {
+
+                    projectRepository
+                            .findByName(projectName)
+                            .filter(anotherProject -> !Objects.equals(anotherProject.getId(), projectEntity.getId()))
+                            .ifPresent(anotherProject -> {
+                                try {
+                                    throw new BadRequestException(String.format("Project \"s%\" already exists", projectName));
+                                } catch (BadRequestException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                    projectEntity.setName(projectName);
+                });
+
+        final ProjectEntity savedProject = projectRepository.saveAndFlush(projectEntity);
+
+        return projectDTOFactory.makeProjectDTO(savedProject);
+    }
+
+    @DeleteMapping(DELETE_PROJECT)
+    public AckDto deleteProject(@PathVariable("project_id") Long projectId) {
+
+        getProjectOrThrowException(projectId);
+
+        projectRepository.deleteById(projectId);
+
+        return AckDto.makeDefault(true);
+
+    }
+
+    private ProjectEntity getProjectOrThrowException(Long projectId) {
+        return projectRepository.findById(projectId)
                 .orElseThrow(() ->
                         new NotFoundException(
                                 String.format("Project \"s%\" not found", projectId))
                 );
-
-        projectRepository.findById(projectId)
-                .filter(anotherProject -> !Objects.equals(anotherProject.getId(), projectId))
-                .ifPresent(anotherProject -> {
-                    try {
-                        throw new BadRequestException(String.format("Project \"s%\" already exists", name));
-                    } catch (BadRequestException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-
-        projectEntity.setName(name);
-        projectEntity = projectRepository.saveAndFlush(projectEntity);
-
-        return projectDTOFactory.makeProjectDTO(projectEntity);
     }
 
 }
