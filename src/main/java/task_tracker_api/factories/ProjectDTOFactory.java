@@ -9,7 +9,7 @@ public class ProjectDTOFactory {
 
     public ProjectDTO makeProjectDTO(ProjectEntity projectEntity) {
 
-        return  ProjectDTO.builder()
+        return ProjectDTO.builder()
                 .id(projectEntity.getId())
                 .name(projectEntity.getName())
                 .createdAt(projectEntity.getCreatedAt())
